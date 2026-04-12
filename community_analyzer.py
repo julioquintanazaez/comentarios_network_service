@@ -1,14 +1,14 @@
-import community as community_louvain
 import networkx as nx
 from collections import defaultdict
 
-def detect_communities(G, resolution=1.0):
+def detect_communities(G, resolution=1.0, seed=42):
     """
-    Detecta comunidades usando algoritmo Louvain
+    Detecta comunidades usando algoritmo Louvain de NetworkX
     
     Args:
         G: networkx Graph
         resolution: parámetro de resolución para Louvain (mayor = más comunidades)
+        seed: semilla para reproducibilidad
     
     Returns:
         partition: dict {node: community_id}
@@ -17,17 +17,26 @@ def detect_communities(G, resolution=1.0):
     if G.number_of_nodes() == 0:
         return {}, {}
     
-    # Ajustar resolución si es necesario
-    partition = community_louvain.best_partition(G, 
-                                                 weight='weight',
-                                                 resolution=resolution)
+    # Detectar comunidades usando Louvain de NetworkX
+    communities_list = nx.community.louvain_communities(
+        G, 
+        weight='weight', 
+        resolution=resolution,
+        seed=seed
+    )
     
-    # Agrupar por comunidad
-    communities = defaultdict(list)
+    # Convertir a formato partition {node: community_id}
+    partition = {}
+    for comm_id, nodes in enumerate(communities_list):
+        for node in nodes:
+            partition[node] = comm_id
+    
+    # Agrupar por comunidad (mismo formato que antes)
+    communities_dict = defaultdict(list)
     for node, comm_id in partition.items():
-        communities[comm_id].append(node)
+        communities_dict[comm_id].append(node)
     
-    return partition, dict(communities)
+    return partition, dict(communities_dict)
 
 def classify_community_sentiment(communities, G):
     """
