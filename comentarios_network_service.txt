@@ -1,0 +1,12 @@
+comentarios_network_service/
+├── app/
+│   ├── __init__.py
+│   ├── main.py           # FastAPI app
+│   ├── models.py         # Pydantic models
+│   ├── network_builder.py # Construcción de red
+│   ├── community_analyzer.py # Detección de comunidades
+│   ├── text_utils.py     # Limpieza de texto sin modelos
+│   └── metrics.py        # Fuerza, distancia, similitud
+├── requirements.txt
+└── Dockerfile (opcional)
+

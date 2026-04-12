@@ -1,0 +1,25 @@
+{
+  "comentarios": [
+    {
+      "id_comentario": "1",
+      "texto": "Este producto es increíble, me encanta",
+      "sentimiento": "pos",
+      "peso": 0.95,
+      "probabilidades": {"pos": 0.95, "neg": 0.02, "neu": 0.03}
+    },
+    {
+      "id_comentario": "2",
+      "texto": "Producto increíble, muy bueno",
+      "sentimiento": "pos",
+      "peso": 0.92,
+      "probabilidades": {"pos": 0.92, "neg": 0.03, "neu": 0.05}
+    },
+    {
+      "id_comentario": "3",
+      "texto": "Mala calidad, no lo recomiendo",
+      "sentimiento": "neg",
+      "peso": 0.88,
+      "probabilidades": {"pos": 0.05, "neg": 0.88, "neu": 0.07}
+    }
+  ]
+}
