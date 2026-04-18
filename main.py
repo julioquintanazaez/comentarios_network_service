@@ -46,7 +46,7 @@ async def root():
     }
 
 
-@app.post("/analyze", response_model=NetworkAnalysisOutput)
+@app.post("/run_comments_analysis", response_model=NetworkAnalysisOutput)
 async def analyze_comment_network(
     file: UploadFile = File(..., description="JSON o CSV con comentarios"),
     resolution: float = 1.0,
