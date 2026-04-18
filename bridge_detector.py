@@ -1,11 +1,11 @@
 from collections import defaultdict, Counter
 
-def detect_bridges_between_communities(G, partition):
+def detect_bridges_between_communities(graph, partition):
     """
-    Detecta comentarios que conectan diferentes comunidades
+    Detects comments that connect different communities
     
     Returns:
-        Lista de diccionarios con formato:
+        List of dictionaries with format:
         {
             "community_A": int,
             "community_B": int,
@@ -14,43 +14,43 @@ def detect_bridges_between_communities(G, partition):
             "avg_weight": float
         }
     """
-    # Diccionario para almacenar conexiones entre comunidades
-    # Key: (comA, comB) con comA < comB
+    # Dictionary to store connections between communities
+    # Key: (commA, commB) with commA < commB
     connections = defaultdict(lambda: {
         'bridging_comments': set(),
         'edge_weights': []
     })
     
-    # Analizar cada arista
-    for u, v, data in G.edges(data=True):
-        comm_u = partition[u]
-        comm_v = partition[v]
+    # Analyze each edge
+    for node_u, node_v, edge_data in graph.edges(data=True):
+        community_u = partition[node_u]
+        community_v = partition[node_v]
         
-        if comm_u != comm_v:
-            # Ordenar comunidades para tener clave única
-            com_a, com_b = sorted([comm_u, comm_v])
-            weight = data.get('weight', 1)
+        if community_u != community_v:
+            # Sort communities to have unique key
+            community_a, community_b = sorted([community_u, community_v])
+            weight = edge_data.get('weight', 1)
             
-            # Añadir comentarios puente
-            connections[(com_a, com_b)]['bridging_comments'].add(u)
-            connections[(com_a, com_b)]['bridging_comments'].add(v)
-            connections[(com_a, com_b)]['edge_weights'].append(weight)
+            # Add bridging comments
+            connections[(community_a, community_b)]['bridging_comments'].add(node_u)
+            connections[(community_a, community_b)]['bridging_comments'].add(node_v)
+            connections[(community_a, community_b)]['edge_weights'].append(weight)
     
-    # Convertir a formato de salida
+    # Convert to output format
     bridges = []
-    for (com_a, com_b), data in connections.items():
-        weights = data['edge_weights']
+    for (community_a, community_b), connection_data in connections.items():
+        weights = connection_data['edge_weights']
         avg_weight = sum(weights) / len(weights) if weights else 0
         
         bridges.append({
-            "community_A": com_a,
-            "community_B": com_b,
-            "bridging_comment_ids": list(data['bridging_comments']),
+            "community_A": community_a,
+            "community_B": community_b,
+            "bridging_comment_ids": list(connection_data['bridging_comments']),
             "total_connections": len(weights),
             "avg_weight": round(avg_weight, 3)
         })
     
-    # Ordenar por total_connections descendente (puentes más fuertes primero)
-    bridges.sort(key=lambda x: x['total_connections'], reverse=True)
+    # Sort by total_connections descending (strongest bridges first)
+    bridges.sort(key=lambda bridge: bridge['total_connections'], reverse=True)
     
     return bridges

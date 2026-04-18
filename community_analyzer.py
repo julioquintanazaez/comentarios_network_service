@@ -1,68 +1,69 @@
 import networkx as nx
 from collections import defaultdict
+import numpy as np
 
-def detect_communities(G, resolution=1.0, seed=42):
+def detect_communities(graph, resolution=1.0, seed=42):
     """
-    Detecta comunidades usando algoritmo Louvain de NetworkX
+    Detects communities using NetworkX Louvain algorithm
     
     Args:
-        G: networkx Graph
-        resolution: parámetro de resolución para Louvain (mayor = más comunidades)
-        seed: semilla para reproducibilidad
+        graph: networkx Graph
+        resolution: resolution parameter for Louvain (higher = more communities)
+        seed: seed for reproducibility
     
     Returns:
         partition: dict {node: community_id}
         communities: dict {community_id: [nodes]}
     """
-    if G.number_of_nodes() == 0:
+    if graph.number_of_nodes() == 0:
         return {}, {}
     
-    # Detectar comunidades usando Louvain de NetworkX
+    # Detect communities using NetworkX Louvain
     communities_list = nx.community.louvain_communities(
-        G, 
+        graph, 
         weight='weight', 
         resolution=resolution,
         seed=seed
     )
     
-    # Convertir a formato partition {node: community_id}
+    # Convert to partition format {node: community_id}
     partition = {}
-    for comm_id, nodes in enumerate(communities_list):
+    for community_id, nodes in enumerate(communities_list):
         for node in nodes:
-            partition[node] = comm_id
+            partition[node] = community_id
     
-    # Agrupar por comunidad (mismo formato que antes)
+    # Group by community (same format as before)
     communities_dict = defaultdict(list)
-    for node, comm_id in partition.items():
-        communities_dict[comm_id].append(node)
+    for node, community_id in partition.items():
+        communities_dict[community_id].append(node)
     
     return partition, dict(communities_dict)
 
-def classify_community_sentiment(communities, G):
+def classify_community_sentiment(communities, graph):
     """
-    Determina sentimiento dominante de cada comunidad basado en pesos y probabilidades
+    Determines dominant sentiment of each community based on weights and probabilities
     """
-    comm_sentiment = {}
+    community_sentiment = {}
     
-    for comm_id, nodes in communities.items():
+    for community_id, nodes in communities.items():
         if not nodes:
-            comm_sentiment[comm_id] = 'neu'
+            community_sentiment[community_id] = 'neu'
             continue
         
-        # Acumular probabilidades ponderadas
+        # Accumulate weighted probabilities
         pos_sum = 0.0
         neg_sum = 0.0
         neu_sum = 0.0
         total_weight = 0.0
         
         for node in nodes:
-            peso = G.nodes[node].get('peso', 1.0)
-            probs = G.nodes[node].get('probabilidades', {'pos': 0.33, 'neg': 0.33, 'neu': 0.34})
+            weight = graph.nodes[node].get('weight', 1.0)
+            probabilities = graph.nodes[node].get('probabilities', {'pos': 0.33, 'neg': 0.33, 'neu': 0.34})
             
-            pos_sum += probs.get('pos', 0) * peso
-            neg_sum += probs.get('neg', 0) * peso
-            neu_sum += probs.get('neu', 0) * peso
-            total_weight += peso
+            pos_sum += probabilities.get('pos', 0) * weight
+            neg_sum += probabilities.get('neg', 0) * weight
+            neu_sum += probabilities.get('neu', 0) * weight
+            total_weight += weight
         
         if total_weight > 0:
             avg_pos = pos_sum / total_weight
@@ -74,66 +75,66 @@ def classify_community_sentiment(communities, G):
         else:
             dominant = 'neu'
         
-        comm_sentiment[comm_id] = dominant
+        community_sentiment[community_id] = dominant
     
-    return comm_sentiment
+    return community_sentiment
 
-def find_community_outliers(G, partition, communities, percentile_threshold=10):
+def find_community_outliers(graph, partition, communities, percentile_threshold=10):
     """
-    Detecta outliers dentro de cada comunidad usando closeness centrality
+    Detects outliers within each community using closeness centrality
     
     Args:
-        percentile_threshold: percentil inferior para considerar outlier (ej. 10 = 10% más bajo)
+        percentile_threshold: lower percentile to consider as outlier (e.g., 10 = lowest 10%)
     """
     outliers = {}
     
-    for comm_id, nodes in communities.items():
-        if len(nodes) < 4:  # Comunidades muy pequeñas no tienen outliers significativos
-            outliers[comm_id] = []
+    for community_id, nodes in communities.items():
+        if len(nodes) < 4:  # Very small communities have no significant outliers
+            outliers[community_id] = []
             continue
         
-        # Subgrafo de la comunidad
-        subgraph = G.subgraph(nodes)
+        # Subgraph of the community
+        subgraph = graph.subgraph(nodes)
         if subgraph.number_of_nodes() < 3:
-            outliers[comm_id] = []
+            outliers[community_id] = []
             continue
         
-        # Calcular closeness centrality
+        # Calculate closeness centrality
         try:
             closeness = nx.closeness_centrality(subgraph, distance='weight')
             if closeness:
-                # Usar percentil en lugar de umbral fijo
+                # Use percentile instead of fixed threshold
                 closeness_values = list(closeness.values())
                 threshold = np.percentile(closeness_values, percentile_threshold)
-                comm_outliers = [node for node in nodes if closeness.get(node, 0) <= threshold]
-                outliers[comm_id] = comm_outliers
+                community_outliers = [node for node in nodes if closeness.get(node, 0) <= threshold]
+                outliers[community_id] = community_outliers
             else:
-                outliers[comm_id] = []
+                outliers[community_id] = []
         except:
-            outliers[comm_id] = []
+            outliers[community_id] = []
     
     return outliers
 
-def get_community_centers(G, communities):
+def get_community_centers(graph, communities):
     """
-    Encuentra el comentario más central en cada comunidad (mayor betweenness centrality)
+    Finds the most central comment in each community (highest betweenness centrality)
     """
     centers = {}
     
-    for comm_id, nodes in communities.items():
+    for community_id, nodes in communities.items():
         if len(nodes) < 2:
-            centers[comm_id] = nodes[0] if nodes else None
+            centers[community_id] = nodes[0] if nodes else None
             continue
         
-        subgraph = G.subgraph(nodes)
+        subgraph = graph.subgraph(nodes)
         try:
             betweenness = nx.betweenness_centrality(subgraph, weight='weight')
             if betweenness:
                 center = max(betweenness, key=betweenness.get)
-                centers[comm_id] = center
+                centers[community_id] = center
             else:
-                centers[comm_id] = nodes[0] if nodes else None
+                centers[community_id] = nodes[0] if nodes else None
         except:
-            centers[comm_id] = nodes[0] if nodes else None
+            centers[community_id] = nodes[0] if nodes else None
     
     return centers

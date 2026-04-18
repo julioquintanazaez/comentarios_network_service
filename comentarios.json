@@ -1,25 +1,25 @@
 {
-  "comentarios": [
+  "comments": [
     {
-      "id_comentario": "1",
-      "texto": "Este producto es increíble, me encanta",
-      "sentimiento": "pos",
-      "peso": 0.95,
-      "probabilidades": {"pos": 0.95, "neg": 0.02, "neu": 0.03}
+      "comment_id": "1",
+      "text": "Este producto es increíble, me encanta",
+      "sentiment": "pos",
+      "weight": 0.95,
+      "probabilities": {"pos": 0.95, "neg": 0.02, "neu": 0.03}
     },
     {
-      "id_comentario": "2",
-      "texto": "Producto increíble, muy bueno",
-      "sentimiento": "pos",
-      "peso": 0.92,
-      "probabilidades": {"pos": 0.92, "neg": 0.03, "neu": 0.05}
+      "comment_id": "2",
+      "text": "Producto increíble, muy bueno",
+      "sentiment": "pos",
+      "weight": 0.92,
+      "probabilities": {"pos": 0.92, "neg": 0.03, "neu": 0.05}
     },
     {
-      "id_comentario": "3",
-      "texto": "Mala calidad, no lo recomiendo",
-      "sentimiento": "neg",
-      "peso": 0.88,
-      "probabilidades": {"pos": 0.05, "neg": 0.88, "neu": 0.07}
+      "comment_id": "3",
+      "text": "Mala calidad, no lo recomiendo",
+      "sentiment": "neg",
+      "weight": 0.88,
+      "probabilities": {"pos": 0.05, "neg": 0.88, "neu": 0.07}
     }
   ]
 }

@@ -8,11 +8,11 @@ class Sentiment(str, Enum):
     neu = "neu"
 
 class CommentInput(BaseModel):
-    id_comentario: str
-    texto: str
-    sentimiento: Sentiment
-    peso: float
-    probabilidades: Dict[str, float]
+    comment_id: str
+    text: str
+    sentiment: Sentiment
+    weight: float
+    probabilities: Dict[str, float]
 
 class BridgeOutput(BaseModel):
     community_A: int

@@ -22,7 +22,7 @@ from models import NetworkAnalysisOutput, BridgeOutput, CommunityOutput
 
 app = FastAPI(
     title="Comment Network Analysis Service API",
-    description="Analiza redes de comentarios basadas en similitud léxica",
+    description="Analyzes comment networks based on lexical similarity",
     version="1.0.0"
 )
 
@@ -31,14 +31,14 @@ async def root():
     return {
         "service": "Comment Network Analysis Service API",
         "version": "1.0.0",
-        "description": "Analiza redes de comentarios basadas en similitud léxica",
+        "description": "Analyzes comment networks based on lexical similarity",
         "endpoints": {
             "POST /analyze": "Upload CSV or JSON file for analysis",
             "GET /health": "Health check"
         },
         "input_formats": {
-            "CSV": "File with columns: id_comentario, text, sentimiento, peso, probabilidades",
-            "JSON": "Structure: {'data': [{'id_comentario': 1, 'text': 'Some comment', 'sentimiento': 'pos', 'peso': '1', 'probabilidades': '10.5'}]}"
+            "CSV": "File with columns: comment_id, text, sentiment, weight, probabilities",
+            "JSON": "Structure: {'data': [{'comment_id': 1, 'text': 'Some comment', 'sentiment': 'pos', 'weight': '1', 'probabilities': '10.5'}]}"
         },
         "example_usage": {
             "csv and json": "curl -X POST -F 'file=@sales.csv' http://host/analyze",
@@ -48,117 +48,117 @@ async def root():
 
 @app.post("/run_comments_analysis", response_model=NetworkAnalysisOutput)
 async def analyze_comment_network(
-    file: UploadFile = File(..., description="JSON o CSV con comentarios"),
+    file: UploadFile = File(..., description="JSON or CSV with comments"),
     resolution: float = 1.0,
     outlier_percentile: int = 10
 ):
     """
-    Analiza red de comentarios y devuelve comunidades, puentes y métricas
+    Analyzes comment network and returns communities, bridges and metrics
     
-    Formato esperado del archivo:
-    - id_comentario (str/int)
-    - texto (str)
-    - sentimiento (pos/neg/neu)
-    - peso (float)
-    - probabilidades (JSON string o dict en JSON)
+    Expected file format:
+    - comment_id (str/int)
+    - text (str)
+    - sentiment (pos/neg/neu)
+    - weight (float)
+    - probabilities (JSON string or dict in JSON)
     """
     
-    # Leer archivo
+    # Read file
     try:
         content = await file.read()
         
         if file.filename.endswith('.json'):
             data = json.loads(content)
-            if isinstance(data, dict) and 'comentarios' in data:
-                data = data['comentarios']
+            if isinstance(data, dict) and 'comments' in data:
+                data = data['comments']
         elif file.filename.endswith('.csv'):
             from io import StringIO
             df = pd.read_csv(StringIO(content.decode('utf-8')))
-            # Convertir probabilidades si es string JSON
-            if 'probabilidades' in df.columns and df['probabilidades'].dtype == 'object':
-                df['probabilidades'] = df['probabilidades'].apply(json.loads)
+            # Convert probabilities if it's a JSON string
+            if 'probabilities' in df.columns and df['probabilities'].dtype == 'object':
+                df['probabilities'] = df['probabilities'].apply(json.loads)
             data = df.to_dict('records')
         else:
-            raise HTTPException(400, "Formato no soportado. Use JSON o CSV")
+            raise HTTPException(400, "Unsupported format. Use JSON or CSV")
         
-        # Validar campos mínimos
-        required_fields = ['id_comentario', 'texto', 'sentimiento', 'peso', 'probabilidades']
+        # Validate required fields
+        required_fields = ['comment_id', 'text', 'sentiment', 'weight', 'probabilities']
         for record in data:
             if not all(field in record for field in required_fields):
-                raise HTTPException(400, f"Falta campo requerido. Necesita: {required_fields}")
+                raise HTTPException(400, f"Missing required field. Needs: {required_fields}")
         
-        # Construir red
-        G = build_comment_network(data)
+        # Build network
+        graph = build_comment_network(data)
         
-        if G.number_of_nodes() == 0:
+        if graph.number_of_nodes() == 0:
             return JSONResponse({
-                "error": "No se pudo construir la red",
+                "error": "Could not build the network",
                 "num_comments": 0
             }, status_code=400)
         
-        # Detectar comunidades
-        partition, communities = detect_communities(G, resolution=resolution)
+        # Detect communities
+        partition, communities = detect_communities(graph, resolution=resolution)
         
         if not communities:
             return JSONResponse({
-                "error": "No se detectaron comunidades",
-                "num_comments": G.number_of_nodes()
+                "error": "No communities detected",
+                "num_comments": graph.number_of_nodes()
             }, status_code=400)
         
-        # Sentimiento de comunidades
-        comm_sentiment = classify_community_sentiment(communities, G)
+        # Community sentiment
+        community_sentiment = classify_community_sentiment(communities, graph)
         
         # Outliers
-        outliers = find_community_outliers(G, partition, communities, outlier_percentile)
+        outliers = find_community_outliers(graph, partition, communities, outlier_percentile)
         
-        # Centros de comunidades
-        centers = get_community_centers(G, communities)
+        # Community centers
+        centers = get_community_centers(graph, communities)
         
-        # Puentes entre comunidades (TU FORMATO PREFERIDO)
-        bridges = detect_bridges_between_communities(G, partition)
+        # Bridges between communities (YOUR PREFERRED FORMAT)
+        bridges = detect_bridges_between_communities(graph, partition)
         
-        # Fuerza global
-        global_strength = network_strength(G)
+        # Global strength
+        global_strength = network_strength(graph)
         
-        # Fuerza por comunidad
+        # Strength per community
         community_strengths = {}
-        for comm_id, nodes in communities.items():
-            community_strengths[comm_id] = community_strength(G, partition, comm_id, nodes)
+        for community_id, nodes in communities.items():
+            community_strengths[community_id] = community_strength(graph, partition, community_id, nodes)
         
-        # Construir respuesta
+        # Build response
         communities_output = {}
-        for comm_id, nodes in communities.items():
-            communities_output[comm_id] = CommunityOutput(
-                sentiment=comm_sentiment[comm_id],
-                strength=community_strengths[comm_id],
+        for community_id, nodes in communities.items():
+            communities_output[community_id] = CommunityOutput(
+                sentiment=community_sentiment[community_id],
+                strength=community_strengths[community_id],
                 members=nodes,
-                outliers=outliers.get(comm_id, []),
-                center_comment_id=centers.get(comm_id)
+                outliers=outliers.get(community_id, []),
+                center_comment_id=centers.get(community_id)
             )
         
-        # Convertir puentes al modelo
+        # Convert bridges to model
         bridges_output = [
             BridgeOutput(
-                community_A=b['community_A'],
-                community_B=b['community_B'],
-                bridging_comment_ids=b['bridging_comment_ids'],
-                total_connections=b['total_connections'],
-                avg_weight=b['avg_weight']
-            ) for b in bridges
+                community_A=bridge['community_A'],
+                community_B=bridge['community_B'],
+                bridging_comment_ids=bridge['bridging_comment_ids'],
+                total_connections=bridge['total_connections'],
+                avg_weight=bridge['avg_weight']
+            ) for bridge in bridges
         ]
         
         return NetworkAnalysisOutput(
-            num_comments=G.number_of_nodes(),
-            num_edges=G.number_of_edges(),
+            num_comments=graph.number_of_nodes(),
+            num_edges=graph.number_of_edges(),
             global_strength=global_strength,
             communities=communities_output,
             bridges_between_communities=bridges_output
         )
         
     except json.JSONDecodeError:
-        raise HTTPException(400, "Error al decodificar JSON")
+        raise HTTPException(400, "Error decoding JSON")
     except Exception as e:
-        raise HTTPException(500, f"Error interno: {str(e)}")
+        raise HTTPException(500, f"Internal error: {str(e)}")
     
 
 @app.get("/health")
